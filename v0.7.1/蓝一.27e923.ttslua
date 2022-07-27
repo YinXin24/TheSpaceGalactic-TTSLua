@@ -1,0 +1,30 @@
+function onLoad(save_state)
+LocalCard = nil
+Build0 = getObjectFromGUID('dd374f')
+Build1 = getObjectFromGUID('4b92c5')
+CardZone = getObjectFromGUID('e2a113')
+end
+
+function onObjectEnterScriptingZone(zone, enter_object)
+  if (zone.guid == self.guid) and (enter_object.getDescription() == '建筑') and (Build1.getName() == '建筑标识-一' ) and (LocalCard == nil)
+  then
+  Build1.setName(CardZone.getName() ..'-'.. enter_object.getName())
+  LocalCard = getObjectFromGUID(enter_object.guid)
+else if (zone.guid == self.guid) and (enter_object.getDescription() == '势力') and (Build1.getName() == '公用建筑标识-一' ) and (LocalCard == nil)
+  then
+  Build0.setName(enter_object.getName())
+  LocalCard = getObjectFromGUID(enter_object.guid)
+  end
+end
+end
+
+function onObjectLeaveScriptingZone(zone, leave_object)
+  if (zone.guid == self.guid) and (leave_object.getDescription() == '建筑') and (Build1.getName() == CardZone.getName() ..'-'.. leave_object.getName()) and (LocalCard ~= nil)
+  then Build1.setName('建筑标识-一')
+    LocalCard = nil
+  end
+  if (zone.guid == self.guid) and (LocalCard ~= nil) and (leave_object.getDescription() == '势力') and (LocalCard.getName() == Build0.getName())
+  then Build0.setName('建筑标识-总部')
+    LocalCard = nil
+  end
+end

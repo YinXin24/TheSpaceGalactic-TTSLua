@@ -1,0 +1,8 @@
+function onUpdate()
+  if (self.getRotation().z < 20) and (self.getRotation().z > -20)
+  then self.setName('先锋舰队')
+  end
+  if (self.getRotation().z < 200) and (self.getRotation().z > 160)
+  then self.setName('主力舰队')
+  end
+end

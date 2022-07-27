@@ -1,0 +1,58 @@
+function onLoad(save_state)
+LocalUnit = {}
+LocalSpace = nil
+HPNum = 0
+HP = {
+        click_function = "setHP",
+        function_owner = self,
+        label          = '',
+        position       = {0, 0, 0},
+        rotation       = {0, 0, 0},
+        width          = 0,
+        height         = 0,
+        font_size      = 1500000,
+        font_color     = {1, 1 ,1},
+        color          = {1, 1, 1},
+        tooltip        = "回合结束",
+    }
+end
+function onObjectEnterScriptingZone(zone, enter_object)
+  if (zone.guid == self.guid) and (enter_object.getDescription() == '空间') and (LocalSpace == nil)
+  then self.createButton(HP)
+    LocalSpace = enter_object.guid
+  end
+  if (zone.guid == self.guid) and (enter_object.getDescription() == '单位') and (LocalSpace ~= nil)
+  then
+    LocalUnit[enter_object.guid] = enter_object.getName()
+    HP_func()
+  end
+
+end
+function onObjectLeaveScriptingZone(zone, leave_object)
+  if (zone.guid == self.guid) and (leave_object.getDescription() == '空间') and (LocalSpace == leave_object.guid)
+  then self.removeButton(0)
+       HPNum = 0
+       LocalSpace = nil
+       LocalUnit = {}
+  end
+  if (zone.guid == self.guid) and (leave_object.getDescription() == '单位') and (LocalSpace ~= nil)
+  then
+    LocalUnit[leave_object.guid] = nil
+    HP_func()
+  end
+end
+function HP_func()
+  HPNum = 0
+  for k,v in pairs(LocalUnit) do
+    if (v == '主力舰队')
+    then HPNum = HPNum + 2
+    end
+    if (v == '先锋��队')
+    then HPNum = HPNum + 1
+    end
+  end
+  self.editButton({0, label= HPNum})
+  if (HPNum == 0)
+  then self.editButton({0, label= ''})
+  end
+end

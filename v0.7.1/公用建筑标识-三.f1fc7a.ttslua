@@ -1,0 +1,10 @@
+function onUpdate()
+  if (self.getRotation().z < 20) and (self.getRotation().z > -20) and (self.getName() == '建筑标识-一')
+  then self.setName('公用建筑标识-三')
+
+  end
+  if (self.getRotation().z < 200) and (self.getRotation().z > 160) and (self.getName() == '公用建筑标识-三')
+  then self.setName('建筑标识-一')
+
+  end
+end
