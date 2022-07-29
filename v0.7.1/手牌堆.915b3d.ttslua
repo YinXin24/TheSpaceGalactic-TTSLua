@@ -1,0 +1,22 @@
+function onLoad(save_state)
+  self.createButton({
+          click_function = "deck",
+          function_owner = self,
+          label          = self.getQuantity(),
+          position       = {0, 0, -2.5},
+          rotation       = {180, 180, 0},
+          width          = 0,
+          height         = 0,
+          font_size      = 1000,
+          font_color     = {1, 1 ,1},
+          color          = {1, 1, 1},
+          tooltip        = "",
+      })
+end
+
+function onObjectLeaveContainer(container, leave_object)
+  self.editButton({0, label = self.getQuantity()})
+end
+function onObjectEnterContainer(container, enter_object)
+  self.editButton({0, label = self.getQuantity()})
+end
