@@ -1,0 +1,17 @@
+space = {}
+space.object = {}
+function space.coordinate_func(zone, enter_object)
+if (space.object[enter_object.guid] == nil ) then
+  space.object[enter_object.guid] = {}
+end
+    space.object[enter_object.guid][zone.getDescription()] = zone.getName()
+    if (enter_object.getDescription() == '空间') then
+      space.object[enter_object.guid].state = true
+    end
+end
+function space.coordinate_erase_func(zone, leave_object)
+if (space.object[leave_object.guid][zone.getDescription()] == zone.getName()) then
+  space.object[leave_object.guid][zone.getDescription()] = nil
+end
+end
+return space

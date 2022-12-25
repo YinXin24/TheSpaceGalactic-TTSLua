@@ -1,0 +1,336 @@
+
+require("colorsRGB")
+require("space")
+function onLoad()
+
+--首先进行回合的玩家
+LastTurnGuy = ''
+--回合按钮
+BlueTurnBut = getObjectFromGUID('1335e2')           --蓝方势力版
+OrangeTurnBut = getObjectFromGUID('bebe28')         --橙方势力版
+GreenTurnBut = getObjectFromGUID('affbe3')          --绿方势力版
+PurpleTurnBut = getObjectFromGUID('e78946')         --紫方势力版
+params = {
+        click_function = "Turn_func",
+        function_owner = self,
+        position       = {0.9, 0.08, 0},
+        rotation       = {0, 180, 0},
+        width          = 300,
+        height         = 450,
+        color          = colorsRGB.red,
+        tooltip        = "回合结束",
+    }
+    BlueTurnBut.createButton(params)
+    OrangeTurnBut.createButton(params)
+    GreenTurnBut.createButton(params)
+    PurpleTurnBut.createButton(params)
+--当前回合数
+TurnNum = 0
+--首先进行回合标识
+FirstTurnToken = getObjectFromGUID('59ed99')
+--回合计数器标识
+TurnToken = getObjectFromGUID('cdb904')
+--局势卡牌
+EventTurn0 = getObjectFromGUID(EventTurn0_GUID)
+EventTurn5 = getObjectFromGUID(EventTurn5_GUID)
+EventTurn10 = getObjectFromGUID(EventTurn10_GUID)
+EventTurn15 = getObjectFromGUID(EventTurn15_GUID)
+EventTurn20 = getObjectFromGUID(EventTurn20_GUID)
+EventTurn25 = getObjectFromGUID(EventTurn25_GUID)
+--回合计数器位置
+TurnZone0 = getObjectFromGUID('0a023e')
+TurnZone1 = getObjectFromGUID('d52591')
+TurnZone2 = getObjectFromGUID('737fd0')
+TurnZone3 = getObjectFromGUID('b5fd63')
+TurnZone4 = getObjectFromGUID('a0b064')
+TurnZone5 = getObjectFromGUID('5ac814')
+TurnZone6 = getObjectFromGUID('c147a8')
+TurnZone7 = getObjectFromGUID('6cd3b7')
+TurnZone8 = getObjectFromGUID('012130')
+TurnZone9 = getObjectFromGUID('46f85e')
+TurnZone10 = getObjectFromGUID('079b10')
+TurnZone11 = getObjectFromGUID('3f5252')
+TurnZone12 = getObjectFromGUID('656add')
+TurnZone13 = getObjectFromGUID('f18eb4')
+TurnZone14 = getObjectFromGUID('739d46')
+TurnZone15 = getObjectFromGUID('6f83bb')
+TurnZone16 = getObjectFromGUID('07364d')
+TurnZone17 = getObjectFromGUID('f9be9c')
+TurnZone18 = getObjectFromGUID('8a9da0')
+TurnZone19 = getObjectFromGUID('db64cc')
+TurnZone20 = getObjectFromGUID('406c96')
+TurnZone21 = getObjectFromGUID('a1853a')
+TurnZone22 = getObjectFromGUID('c65ee5')
+TurnZone23 = getObjectFromGUID('6aaa31')
+TurnZone24 = getObjectFromGUID('5a532a')
+TurnZone25 = getObjectFromGUID('88bd15')
+TurnZone26 = getObjectFromGUID('839cb3')
+TurnZone27 = getObjectFromGUID('04f224')
+TurnZone28 = getObjectFromGUID('d14b57')
+TurnZone29 = getObjectFromGUID('cd5d20')
+
+--势力科研力量数值
+SciBlue = getObjectFromGUID('5bb180')
+SciOrange = getObjectFromGUID('99ade1')
+SciPurple = getObjectFromGUID('ee4b63')
+SciGreen = getObjectFromGUID('6e13c9')
+--势力国力上限数值
+PowerLimitBlue = getObjectFromGUID('dc9756')
+PowerLimitPurple = getObjectFromGUID('a666ed')
+PowerLimitGreen = getObjectFromGUID('541791')
+PowerLimitOrange = getObjectFromGUID('0e2c0d')
+--势力国力数值
+PowerBlue = getObjectFromGUID('91faa4')
+PowerPurple = getObjectFromGUID('c63215')
+PowerGreen = getObjectFromGUID('ff1b8e')
+PowerOrange = getObjectFromGUID('d15b7b')
+--发牌区
+CardZoneBlue = getObjectFromGUID("e2a113")
+CardZonePurple = getObjectFromGUID("fd6834")
+CardZoneOrange = getObjectFromGUID('ae294c')
+CardZoneGreen = getObjectFromGUID('6ccf7b')
+--移动回合标识区
+TurnZoneBlue = getObjectFromGUID("2ed21f")
+TurnZonePurple = getObjectFromGUID("20bbc9")
+TurnZoneOrange = getObjectFromGUID('9d759e')
+TurnZoneGreen = getObjectFromGUID('bae232')
+
+end
+
+
+function onUpdate()
+
+
+end
+
+
+function onObjectEnterScriptingZone(zone, enter_object)
+--获取卡牌信息
+CardType = enter_object.getDescription()
+CardName = enter_object.getName()
+CardRotate = enter_object.getRotation().y
+CardGUID = enter_object.guid
+ZoneColor = colorsRGB.white
+--获取发牌区信息
+ZoneName = zone.getName()
+ZoneType = zone.getDescription()
+--决定最后进行回合的玩家
+if (zone.guid == TurnZoneBlue.guid)
+then if (enter_object.guid == FirstTurnToken.guid)
+then Turn_func(true, '蓝方')
+end
+end
+if (zone.guid == TurnZoneGreen.guid)
+then if (enter_object.guid == FirstTurnToken.guid)
+then Turn_func(true, '绿方')
+end
+end
+if (zone.guid == TurnZoneOrange.guid)
+then if (enter_object.guid == FirstTurnToken.guid)
+then Turn_func(true, '橙方')
+end
+end
+if (zone.guid == TurnZonePurple.guid)
+then if (enter_object.guid == FirstTurnToken.guid)
+then Turn_func(true, '紫方')
+end
+end
+--回合计数器移动
+if (ZoneType == '回合') and (CardType == '局势')
+then if (ZoneName == '0')
+      then
+        printToAll('揭露终局事件:'..CardName)
+        EventTurn0 = getObjectFromGUID(CardGUID)
+      end
+     if (ZoneName == '5')
+      then
+        EventTurn5 = getObjectFromGUID(CardGUID)
+      end
+     if (ZoneName == '10')
+      then
+        EventTurn10 = getObjectFromGUID(CardGUID)
+      end
+     if (ZoneName == '15')
+      then
+        EventTurn15 = getObjectFromGUID(CardGUID)
+      end
+    if (ZoneName == '20')
+      then
+        EventTurn20 = getObjectFromGUID(CardGUID)
+      end
+    if (ZoneName == '25')
+      then
+        EventTurn25 = getObjectFromGUID(CardGUID)
+      end
+end
+if (ZoneType == '回合') and (enter_object.guid == TurnToken.guid)
+then if (ZoneName == '0') and (TurnNum > 0)
+  then TurnNum = 30
+    printToAll('---------第'.. TurnNum .. '轮---------', colorsRGB.gold)
+    printToAll('-----------疲劳-----------', colorsRGB.red)
+  else
+    TurnNum = ZoneName + 0
+    printToAll('---------第'.. TurnNum .. '轮---------', colorsRGB.gold)
+  end
+  if (TurnNum == 30) and (EventTurn0 ~= nil)
+  then printToAll('触发终局事件:'.. EventTurn0.getName(), colorsRGB.khaki)
+  end
+    if (TurnNum == 5) and (EventTurn5 ~= nil)
+    then
+      EventTurn5.flip()
+      printToAll('触发局势事件:'.. EventTurn5.getName(), colorsRGB.khaki)
+    end
+    if (TurnNum == 10) and (EventTurn10 ~= nil)
+    then
+      EventTurn10.flip()
+      printToAll('触发局势事件:'.. EventTurn10.getName(), colorsRGB.khaki)
+    end
+    if (TurnNum == 15) and (EventTurn15 ~= nil)
+    then
+      EventTurn15.flip()
+      printToAll('触发局势事件:'.. EventTurn15.getName(), colorsRGB.khaki)
+    end
+    if (TurnNum == 20) and (EventTurn20 ~= nil)
+    then
+      EventTurn20.flip()
+      printToAll('触发局势事件:'.. EventTurn20.getName(), colorsRGB.khaki)
+    end
+    if (TurnNum == 25) and (EventTurn25 ~= nil)
+    then
+      EventTurn25.flip()
+      printToAll('触发局势事件:'.. EventTurn25.getName(), colorsRGB.khaki)
+    end
+end
+end
+
+function Turn_func(obj, color, alt_click)
+
+
+  if (obj == true)
+  then LastTurnGuy = color
+  printToAll(color..'最后进行回合', colorsRGB.gold)
+else
+  if (obj.guid == BlueTurnBut.guid)
+  then
+    printToAll('------'..CardZoneBlue.getName()..'结束回合------', colorsRGB.red)
+    if (LastTurnGuy == 'CardZoneBlue.getName()')
+    then EndTurn_func(1)
+    end
+  end
+  if (obj.guid == GreenTurnBut.guid)
+  then
+    printToAll('------'..CardZoneGreen.getName()..'结束回合------', colorsRGB.red)
+    if (LastTurnGuy == 'CardZoneGreen.getName()')
+    then EndTurn_func(1)
+    end
+  end
+  if (obj.guid == OrangeTurnBut.guid)
+  then
+    printToAll('------'..CardZoneOrange.getName()..'结束回合------', colorsRGB.red)
+    if (LastTurnGuy == 'CardZoneOrange.getName()')
+    then EndTurn_func(1)
+    end
+  end
+  if (obj.guid == PurpleTurnBut.guid)
+  then
+    printToAll('------'..CardZonePurple.getName()..'结束回合------', colorsRGB.red)
+    if (LastTurnGuy == 'CardZonePurple.getName()')
+    then EndTurn_func(1)
+    end
+  end
+end
+end
+
+function EndTurn_func(Plus)
+ TurnNum = TurnNum + Plus
+ if (TurnNum == 1)
+ then TurnToken.setPositionSmooth({-9.65, 1.16, 2.15},false,false)
+ end
+ if (TurnNum == 2)
+ then TurnToken.setPositionSmooth({-8.68, 1.16, 3.96},false,false)
+ end
+ if (TurnNum == 3)
+ then TurnToken.setPositionSmooth({-7.67, 1.16, 5.69},false,false)
+ end
+ if (TurnNum == 4)
+ then TurnToken.setPositionSmooth({-6.63, 1.16, 7.43},false,false)
+ end
+ if (TurnNum == 5)
+ then TurnToken.setPositionSmooth({-4.93, 1.16, 9.45},false,false)
+ end
+ if (TurnNum == 6)
+ then TurnToken.setPositionSmooth({-2.26, 1.11, 9.90},false,false)
+ end
+ if (TurnNum == 7)
+ then TurnToken.setPositionSmooth({-0.26, 1.16, 9.91},false,false)
+ end
+ if (TurnNum == 8)
+ then TurnToken.setPositionSmooth({1.74, 1.16, 9.90},false,false)
+ end
+ if (TurnNum == 9)
+ then TurnToken.setPositionSmooth({3.77, 1.16, 9.91},false,false)
+ end
+ if (TurnNum == 10)
+ then TurnToken.setPositionSmooth({6.38, 1.16, 9.50},false,false)
+ end
+ if (TurnNum == 11)
+ then TurnToken.setPositionSmooth({8.15, 1.16, 7.41},false,false)
+ end
+ if (TurnNum == 12)
+ then TurnToken.setPositionSmooth({9.17, 1.16, 5.69},false,false)
+ end
+ if (TurnNum == 13)
+ then TurnToken.setPositionSmooth({10.15, 1.16, 3.93},false,false)
+ end
+ if (TurnNum == 14)
+ then TurnToken.setPositionSmooth({11.18, 1.16, 2.19},false,false)
+ end
+ if (TurnNum == 15)
+ then TurnToken.setPositionSmooth({12.12, 1.16, -0.42},false,false)
+ end
+ if (TurnNum == 16)
+ then TurnToken.setPositionSmooth({11.14, 1.16, -2.82},false,false)
+ end
+ if (TurnNum == 17)
+ then TurnToken.setPositionSmooth({10.12, 1.16, -4.60},false,false)
+ end
+ if (TurnNum == 18)
+ then TurnToken.setPositionSmooth({9.12, 1.16, -6.34},false,false)
+ end
+ if (TurnNum == 19)
+ then TurnToken.setPositionSmooth({8.14, 1.16, -8.08},false,false)
+ end
+ if (TurnNum == 20)
+ then TurnToken.setPositionSmooth({6.50, 1.13, -10.22},false,false)
+ end
+ if (TurnNum == 21)
+ then TurnToken.setPositionSmooth({3.77, 1.15, -10.71},false,false)
+ end
+ if (TurnNum == 22)
+ then TurnToken.setPositionSmooth({1.72, 1.16, -10.66},false,false)
+ end
+ if (TurnNum == 23)
+ then TurnToken.setPositionSmooth({-0.28, 1.16, -10.59},false,false)
+ end
+ if (TurnNum == 24)
+ then TurnToken.setPositionSmooth({-2.26, 1.13, -10.65},false,false)
+ end
+ if (TurnNum == 25)
+ then TurnToken.setPositionSmooth({-4.99, 1.16, -10.29},false,false)
+ end
+ if (TurnNum == 26)
+ then TurnToken.setPositionSmooth({-6.60, 1.14, -8.15},false,false)
+ end
+ if (TurnNum == 27)
+ then TurnToken.setPositionSmooth({-7.63, 1.16, -6.37},false,false)
+ end
+ if (TurnNum == 28)
+ then TurnToken.setPositionSmooth({-8.63, 1.16, -4.60},false,false)
+ end
+ if (TurnNum == 29)
+ then TurnToken.setPositionSmooth({-9.67, 1.16, -2.87},false,false)
+ end
+ if (TurnNum == 30)
+ then TurnToken.setPositionSmooth({-10.85, 1.14, -0.36},false,false)
+ end
+end
