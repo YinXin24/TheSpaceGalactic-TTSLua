@@ -1,0 +1,116 @@
+require("cards")      --调用卡牌库
+require("colorsRGB")  --调用rgb色值
+function onLoad(save_state)
+  self.createButton({
+    click_function = 'title',
+    function_owner = self,
+    label          = '请选择剧本',
+    position       = {0,0.1,0},
+    rotation       = {0,150,0},
+    scale          = {1,1,1},
+    width          = 900,
+    height         = 250,
+    font_size      = 150,
+    color          = colorsRGB.grey,
+    font_color     = colorsRGB.white,
+    hover_color    = colorsRGB.grey,
+    press_color    = colorsRGB.grey,
+    tooltip        = '游戏信息',
+  })
+  self.createButton({
+    click_function = 'Scenario_1',
+    function_owner = self,
+    label          = '阿尔法空间带战役',
+    position       = {0.55,0.1,1},
+    rotation       = {0,150,0},
+    scale          = {1,1,1},
+    width          = 700,
+    height         = 100,
+    font_size      = 75,
+    color          = colorsRGB.grey,
+    font_color     = colorsRGB.gold,
+    hover_color    = colorsRGB.orange,
+    press_color    = colorsRGB.red,
+    tooltip        = '基础剧本，原汁原味的战斗体验',
+  })
+  self.createButton({
+    click_function = 'Scenario_2',
+    function_owner = self,
+    label          = '虚空军势',
+    position       = {0.3,0.1,0.55},
+    rotation       = {0,150,0},
+    scale          = {1,1,1},
+    width          = 400,
+    height         = 100,
+    font_size      = 75,
+    color          = colorsRGB.grey,
+    font_color     = colorsRGB.gold,
+    hover_color    = colorsRGB.orange,
+    press_color    = colorsRGB.red,
+    tooltip        = '扩展包一附带剧本，指挥高机动性的母舰相互对抗',
+  })
+  self.createButton({
+    click_function = 'Scenario_3',
+    function_owner = self,
+    label          = '列强治下的和平',
+    position       = {-0.33,0.1,-0.55},
+    rotation       = {0,150,0},
+    scale          = {1,1,1},
+    width          = 700,
+    height         = 100,
+    font_size      = 75,
+    color          = colorsRGB.grey,
+    font_color     = colorsRGB.gold,
+    hover_color    = colorsRGB.orange,
+    press_color    = colorsRGB.red,
+    tooltip        = '扩展包二附带剧本，扮演在列强对抗下艰难求存的小国们',
+  })
+end
+function title()
+  printToAll('空间银河新秩序v0.7.3, 作者：无双风能')
+end
+function Scenario_1()
+  self.removeButton(0)
+  self.removeButton(1)
+  self.removeButton(2)
+  self.removeButton(3)
+  local ForceCard = getObjectFromGUID('e22938')
+  ForceCard.randomize()
+  ForceCard.setPosition{0.76, 3, -0.39}
+  ForceCard.setRotation{0.00, 270.00, 180.00}
+  getObjectFromGUID('348684').randomize()
+  getObjectFromGUID('ccff9b').randomize()
+  self.setDescription('Scenario_1')
+end
+function Scenario_2()
+  self.removeButton(0)
+  self.removeButton(1)
+  self.removeButton(2)
+  self.removeButton(3)
+  local ForceCard = getObjectFromGUID('3b1fc9')
+  getObjectFromGUID('e6e8d6').setPosition({-0.77, 2, 11.99})
+  getObjectFromGUID('e6e8d6').setRotation({0.00, 29.97, 180.00})
+  ForceCard.randomize()
+  ForceCard.setPosition{0.76, 3, -0.39}
+  ForceCard.setRotation{0.00, 270.00, 180.00}
+  getObjectFromGUID('348684').randomize()
+  getObjectFromGUID('ccff9b').randomize()
+  self.setDescription('Scenario_1')
+end
+function Scenario_3()
+  self.setDescription('Scenario_3')
+  printToAll('暂时无法自动设置，请手动摆放', colorsRGB.red)
+  self.removeButton(0)
+  self.removeButton(1)
+  self.removeButton(2)
+  self.removeButton(3)
+  getObjectFromGUID('8eb97a').setPositionSmooth({-12.08, 1.14, -27.42}, false, false)
+  getObjectFromGUID('8eb97a').setRotationSmooth({0.00, 180.02, 0.00}, false, false)
+  getObjectFromGUID('8eb97a').setLock(true)
+
+  getObjectFromGUID('4b92c5').setPositionSmooth({-8.53, 1.14, -27.71}, false, false)
+  getObjectFromGUID('4b92c5').setRotationSmooth({0.00, 180.00, 180.00}, false, false)
+
+  getObjectFromGUID('dd374f').setPositionSmooth({-12.83, 5, -27.75}, false, false)
+  getObjectFromGUID('dd374f').setRotationSmooth({0.00, 180.00, 180.00}, false, false)
+end
