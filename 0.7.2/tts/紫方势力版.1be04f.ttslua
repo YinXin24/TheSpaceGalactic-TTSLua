@@ -1,0 +1,626 @@
+require("cards")      --调用卡牌库
+require("colorsRGB")  --调用rgb色值
+require("space")
+npNum = 0             --国力值
+sciNum = 0            --科研力量
+npLimit = 0           --国力上限
+Result_npLimit = 0    --默认计算结果（国力上限）
+Result_sciNum = 0     --默认计算结果（科研力量）
+exnp_C01 = 0          --殖民地国力附加值
+exatk_C01 = 0         --殖民地战斗力附加值
+exatk_C02 = 0         --科研所战斗力附加值
+exatk_C03 = 0         --星港要塞战斗力附加值
+exatk_S01 = 0
+exatk_S02 = 0
+exatk_S14 = 0
+manual_npLimit = 0     --玩家手动调整值（国立上限）
+manual_sciNum = 0      --玩家手动调整值（科研力量）
+CardDetail = {       --建筑&强化牌细节
+b0 = cards.pattern,
+b1 = cards.pattern,
+b2 = cards.pattern,
+b3 = cards.pattern,
+b4 = cards.pattern,
+b5 = cards.pattern,
+e0 = {},
+e1 = {},
+e2 = {},
+e3 = {},
+e4 = {},
+e5 = {},
+}
+PositionInfo = {}
+function onLoad(save_state)
+ScanLine = space.ScanLine
+--获取物品
+MapBord = getObjectFromGUID('eaf93a')
+SciToken = getObjectFromGUID('ee4b63')     --科研力量标识
+npLimitToken = getObjectFromGUID('a666ed') --国力上限标识
+npToken = getObjectFromGUID('c63215')      --国力标识
+UnitToken = {
+b0 = getObjectFromGUID('7b19dd'), --总部建筑标识
+b1 = getObjectFromGUID('f1fc7a'), --公用建筑标识/紫色建筑标识一
+b2 = getObjectFromGUID('4e5dd2'), --二号建筑标识
+b3 = getObjectFromGUID('11fa9f'), -- 三号建筑标识
+b4 = getObjectFromGUID('39e79c'), --四号建筑标识
+b5 = getObjectFromGUID('a098a6'), --五号建筑标识
+f1 = getObjectFromGUID('1273dc'),
+f2 = getObjectFromGUID('16aea7'),
+f3 = getObjectFromGUID('66a2c5'),
+f4 = getObjectFromGUID('f400ac'),
+f5 = getObjectFromGUID('d4aac1'),
+f6 = getObjectFromGUID('efbaef')
+}
+BuildSlot = {
+b1 = getObjectFromGUID('6d8c0a'), --一号建筑槽
+b2 = getObjectFromGUID('f32800'), --二号建筑槽
+b3 = getObjectFromGUID('9a4a5b'), --三号建筑槽
+b4 = getObjectFromGUID('42cb7a'), --四号建筑槽
+b5 = getObjectFromGUID('4b4087')  --五号建筑槽
+}
+CardZone = getObjectFromGUID('fd6834') --出牌区
+end
+
+
+function onObjectDrop(player_color, dropped_object)
+--国力上限玩家手动调整值
+
+if (dropped_object.guid == npLimitToken.guid) and (dropped_object.getPosition().x > 23) and (dropped_object.getPosition().x < 24.5) then
+  npLPos_3dig = (dropped_object.getPosition().z + 9.87)/1.17
+  npLPos_2dig = math.floor(npLPos_3dig*100 +0.5)/100
+  npLPos_dig = math.floor(npLPos_2dig*10 + 0.5)/10
+  npLPos = math.floor(npLPos_dig + 0.5)
+  manual_npLimit = npLPos - Result_npLimit
+  printToAll(CardZone.getName()..'国力上限手动调整值'..manual_npLimit, colorsRGB.violet)
+  if (manual_npLimit + Result_npLimit >= 16) then
+    printToAll(CardZone.getName()..'达成国力胜利', colorsRGB.gold)
+  end
+  if (manual_npLimit + Result_npLimit <= 0) then
+    manual_npLimit = 0
+  end
+  npLimit = manual_npLimit + Result_npLimit
+end
+--科研力量玩家手动调整值
+if (dropped_object.guid == SciToken.guid) and (dropped_object.getPosition().x > 28.9) and (dropped_object.getPosition().x < 29.9) then
+  sciPos_3dig = dropped_object.getPosition().z /0.84 - 4.88
+  sciPos_2dig = math.floor(sciPos_3dig*100 +0.5)/100
+  sciPos_dig = math.floor(sciPos_2dig*10 + 0.5)/10
+  sciPos = math.floor(sciPos_dig + 0.5)
+  manual_sciNum = sciPos - Result_sciNum
+  printToAll(CardZone.getName()..'科研力量手动调整值'..manual_sciNum, colorsRGB.violet)
+  if (manual_sciNum + Result_sciNum <= 0) then
+    manual_sciNum = 0
+  end
+  sciNum = manual_sciNum + Result_sciNum
+end
+--玩家剩余国力
+if (dropped_object.guid == npToken.guid) and (dropped_object.getPosition().x > 23) and (dropped_object.getPosition().x < 24.5) then
+  npPos_3dig = (dropped_object.getPosition().z + 9.87)/1.17
+  npPos_2dig = math.floor(npPos_3dig*100 +0.5)/100
+  npPos_dig = math.floor(npPos_2dig*10 + 0.5)/10
+  npNum = math.floor(npPos_dig + 0.5)
+end
+
+--建筑槽相关
+if (string.find(dropped_object.getDescription(), '%u%d%d', 1, false) ~= nil) then  --识别进入物品是否为手牌
+  local BuildSlotNum = 0
+  while (BuildSlotNum < 6) do
+    local CardCode = dropped_object.getDescription()
+    --建筑槽1
+    for k,v in pairs(BuildSlot.b1.getObjects()) do
+      if (v.guid == dropped_object.guid) and (BuildSlotNum == 1) then
+        --建筑1
+        if (string.find(cards.build, CardCode, int, true) ~= nil) or (string.find(cards.force, CardCode, int, true) ~= nil) then --卡牌进入建筑槽一(列强治下的和平剧本)
+          if (UnitToken.b1.getName() == '公用建���标识-三' ) and (CardDetail.b0.code == nil) and (string.find(cards.force, CardCode, int, true) ~= nil) then --总部卡牌进入建筑槽一
+            CardDetail.b0 = cards[CardCode]                             --绑定建筑细节
+            dropped_object.setDescription(CardCode..'_b0')
+            CardZone.setName(CardDetail.b0.force_name)                        --设置势力名
+            dropped_object.setPositionSmooth({27.68, 1.05, -9.15},false,false)
+            dropped_object.setRotationSmooth({0.00, 90, 0.00}, false, false)
+            dropped_object.setLock(true)                                          --锁定总部牌
+            UnitToken.b0.setName(CardDetail.b0.force_name ..'-'.. CardDetail.b0.name)   --设置建筑标识名称
+            if (CardDetail.b0.scihub == true) then BuildSlot.b1.setDescription('scihub') end
+            printToAll('紫方选择势力'..CardZone.getName(), colorsRGB.violet)
+            element_calculate()
+            apply_element()
+          end
+          if (UnitToken.b1.getName() == '建筑标识-一' ) and (CardDetail.b1.code == nil)then
+            CardDetail.b1 = cards[CardCode]                              --绑定建筑细节
+            enter_object.setDescription(CardCode..'_b1')
+            dropped_object.setPositionSmooth({27.68, 1.05, -9.15},false,false)
+            dropped_object.setRotationSmooth({0.00, 90, 0.00}, false, false)
+            dropped_object.setLock(true)                                            --�����牌
+            UnitToken.b1.setName(CardZone.getName() ..'-'.. CardDetail.b1.name)   --设置建���标识名称
+            if (CardDetail.b1.scihub == true) then BuildSlot.b1.setDescription('scihub') end
+            if (string.find(cards.build, CardCode, int, true) ~= nil) then
+              help_you_speak(CardCode)
+            end
+            if (string.find(cards.force, CardCode, int, true) ~= nil) then
+              printToAll(CardZone.getName()..'占领总部'..CardDetail.b1.name, colorsRGB.violet)
+            end
+            element_calculate()
+            apply_element()
+          end
+        end
+        --强化槽1
+        if (string.find(cards.equip, CardCode, int, true) ~= nil) then
+          if (BuildSlot.b1.getDescription() == 'scihub') then
+            if (CardDetail.e1.code == nil) then
+              CardDetail.e1 = cards[CardCode]
+              dropped_object.setDescription(CardCode..'_e1')
+              dropped_object.setPositionSmooth({27.68, 1.08, -9.15},false,false)
+              dropped_object.setRotationSmooth({0.00, 90, 0.00}, false, false)
+              dropped_object.setLock(true)
+              help_you_speak(CardCode)
+              element_calculate()
+              apply_element()
+            else printToAll('强化槽已满', colorsRGB.red)
+            end
+          else printToAll('无强化槽', colorsRGB.red)
+          end
+        end
+      end
+    end
+    --建筑槽2
+    for k,v in pairs(BuildSlot.b2.getObjects()) do
+      if (v.guid == dropped_object.guid) and (BuildSlotNum == 2) then
+        if (string.find(cards.build, CardCode, int, true) ~= nil) or (string.find(cards.force, CardCode, int, true) ~= nil) then --卡牌进入建筑槽
+          if (CardDetail.b2.code == nil)then
+            CardDetail.b2 = cards[CardCode]                                   --绑定建筑细节
+            dropped_object.setDescription(CardCode..'_b2')
+            dropped_object.setPositionSmooth({27.67, 1.05, -6.46}, false, false)
+            dropped_object.setRotationSmooth({0.00, 90, 0.00}, false, false)
+            dropped_object.setLock(true)                                          --锁定牌
+            UnitToken.b2.setName(CardZone.getName() ..'-'.. CardDetail.b2.name)   --设置建筑标识名称
+            if (CardDetail.b2.scihub == true) then BuildSlot.b2.setDescription('scihub') end
+            if (string.find(cards.build, CardCode, int, true) ~= nil) then
+              help_you_speak(CardCode)
+            end
+            if (string.find(cards.force, CardCode, int, true) ~= nil) then
+              printToAll(CardZone.getName()..'占领总部'..CardDetail.b2.name, colorsRGB.violet)
+            end
+            element_calculate()
+            apply_element()
+          end
+        end
+        if (string.find(cards.equip, CardCode, int, true) ~= nil) then
+          if (BuildSlot.b2.getDescription() == 'scihub') then
+            if (CardDetail.e2.code == nil) then
+              CardDetail.e2 = cards[CardCode]
+              dropped_object.setDescription(CardCode..'_e2')
+              dropped_object.setPositionSmooth({27.67, 1.08, -6.46}, false, false)
+              dropped_object.setRotationSmooth({0.00, 90, 0.00}, false, false)
+              dropped_object.setLock(true)
+              help_you_speak(CardCode)
+              element_calculate()
+              apply_element()
+            else printToAll('强化槽已满', colorsRGB.red)
+            end
+          else printToAll('无强化槽', colorsRGB.red)
+          end
+        end
+      end
+    end
+    --建筑槽3
+    for k,v in pairs(BuildSlot.b3.getObjects()) do
+      if (v.guid == dropped_object.guid) and (BuildSlotNum == 3) then
+        if (string.find(cards.build, CardCode, int, true) ~= nil) or (string.find(cards.force, CardCode, int, true) ~= nil) then --卡牌进入建筑槽
+          if (CardDetail.b3.code == nil)then
+            CardDetail.b3 = cards[CardCode]                                   --绑定建筑细节
+            dropped_object.setDescription(CardCode..'_b3')
+            dropped_object.setPositionSmooth({27.67, 1.05, -3.89}, false, false)
+            dropped_object.setRotationSmooth({0.00, 90, 0.00}, false, false)
+            dropped_object.setLock(true)                                          --锁定牌
+            UnitToken.b3.setName(CardZone.getName() ..'-'.. CardDetail.b3.name)   --设置建筑标识名称
+            if (CardDetail.b3.scihub == true) then BuildSlot.b3.setDescription('scihub') end
+            if (string.find(cards.build, CardCode, int, true) ~= nil) then
+              help_you_speak(CardCode)
+            end
+            if (string.find(cards.force, CardCode, int, true) ~= nil) then
+              printToAll(CardZone.getName()..'占领总部'..CardDetail.b3.name, colorsRGB.violet)
+            end
+            element_calculate()
+            apply_element()
+          end
+        end
+        --强化槽3
+        if (string.find(cards.equip, CardCode, int, true) ~= nil) then
+          if (BuildSlot.b3.getDescription() == 'scihub') then
+            if (CardDetail.e3.code == nil) then
+              CardDetail.e3 = cards[CardCode]
+              dropped_object.setDescription(CardCode..'_e3')
+              dropped_object.setPositionSmooth({27.67, 1.08, -3.89}, false, false)
+              dropped_object.setRotationSmooth({0.00, 90, 0.00}, false, false)
+              dropped_object.setLock(true)
+              help_you_speak(CardCode)
+              element_calculate()
+              apply_element()
+            else printToAll('强化槽已满', colorsRGB.red)
+            end
+          else printToAll('无强化槽', colorsRGB.red)
+          end
+        end
+      end
+    end
+    --建筑槽4
+    for k,v in pairs(BuildSlot.b4.getObjects()) do
+      if (v.guid == dropped_object.guid) and (BuildSlotNum == 4) then
+        if (string.find(cards.build, CardCode, int, true) ~= nil) or (string.find(cards.force, CardCode, int, true) ~= nil) then --卡牌进入建筑槽
+          if (CardDetail.b4.code == nil)then
+            CardDetail.b4 = cards[CardCode]                                   --绑定建筑细节
+            dropped_object.setDescription(CardCode..'_b4')
+            dropped_object.setLock(true)                                          --锁定牌
+            dropped_object.setPositionSmooth({27.69, 1.05, -1.21}, false, false)
+            dropped_object.setRotationSmooth({0.00, 90.00, 0.00}, false, false)
+            UnitToken.b4.setName(CardZone.getName() ..'-'.. CardDetail.b4.name)   --设置建筑标识名称
+            if (CardDetail.b4.scihub == true) then BuildSlot.b4.setDescription('scihub') end
+            if (string.find(cards.build, CardCode, int, true) ~= nil) then
+              help_you_speak(CardCode)
+            end
+            if (string.find(cards.force, CardCode, int, true) ~= nil) then
+              printToAll(CardZone.getName()..'占领总部'..CardDetail.b4.name, colorsRGB.violet)
+            end
+            element_calculate()
+            apply_element()
+          end
+        end
+        if (string.find(cards.equip, CardCode, int, true) ~= nil) then
+          if (BuildSlot.b4.getDescription() == 'scihub') then
+            if (CardDetail.e4.code == nil) then
+              CardDetail.e4 = cards[CardCode]
+              dropped_object.setDescription(CardCode..'_e4')
+              dropped_object.setLock(true)
+              dropped_object.setPositionSmooth({27.69, 1.08, -1.21}, false, false)
+              dropped_object.setRotationSmooth({0.00, 90.00, 0.00}, false, false)
+              help_you_speak(CardCode)
+              element_calculate()
+              apply_element()
+            else printToAll('强化槽已满', colorsRGB.red)
+            end
+          else printToAll('无强化槽', colorsRGB.red)
+          end
+        end
+      end
+    end
+    for k,v in pairs(BuildSlot.b5.getObjects()) do
+      if (v.guid == dropped_object.guid) and (BuildSlotNum == 5) then
+        if (string.find(cards.build, CardCode, int, true) ~= nil) or (string.find(cards.force, CardCode, int, true) ~= nil) then --卡牌进入建筑槽
+          if (CardDetail.b5.code == nil)then
+            CardDetail.b5 = cards[CardCode]                                   --绑定建筑细节
+            dropped_object.setDescription(CardCode..'_b5')
+            dropped_object.setPositionSmooth({27.65, 1.05, 1.41}, false, false)
+            dropped_object.setRotationSmooth({0.00, 90.00, 0.00}, false, false)
+            dropped_object.setLock(true)                                          --锁�����牌
+            UnitToken.b5.setName(CardZone.getName() ..'-'.. CardDetail.b5.name)   --设置建筑标识名称
+            if (CardDetail.b5.scihub == true) then BuildSlot.b5.setDescription('scihub') end
+            if (string.find(cards.build, CardCode, int, true) ~= nil) then
+              help_you_speak(CardCode)
+            end
+            if (string.find(cards.force, CardCode, int, true) ~= nil) then
+              printToAll(CardZone.getName()..'占领总部'..CardDetail.b5.name, colorsRGB.violet)
+            end
+            element_calculate()
+            apply_element()
+          end
+        end
+        if (string.find(cards.equip, CardCode, int, true) ~= nil) then
+          if (BuildSlot.b5.getDescription() == 'scihub') then
+            if (CardDetail.e5.code == nil) then
+              CardDetail.e5 = cards[CardCode]
+              dropped_object.setDescription(CardCode..'_e5')
+              dropped_object.setPositionSmooth({27.65, 1.08, 1.41}, false, false)
+              dropped_object.setRotationSmooth({0.00, 90.00, 0.00}, false, false)
+              dropped_object.setLock(true)
+              help_you_speak(CardCode)
+              element_calculate()
+              apply_element()
+            else printToAll('强化槽已满', colorsRGB.red)
+            end
+          else printToAll('无强化槽', colorsRGB.red)
+          end
+        end
+      end
+    end
+    BuildSlotNum = BuildSlotNum + 1
+  end
+end
+----单位坐标
+PositionInfo = {}
+space.coordinate_func(ScanLine)
+for k,v in pairs(space.object) do
+  if (string.match(getObjectFromGUID(k).getDescription(), '空间') == '空间') and (PositionInfo[v.x..v.y..v.z] == nil)then
+    local space_position = v.x..v.y..v.z
+    PositionInfo[space_position] = {}
+    PositionInfo[space_position].space = k
+  end
+end
+for k1,v1 in pairs(UnitToken) do
+  for k2,v2 in pairs(space.object) do
+    if (v1.guid == k2) then
+      if (v2.x ~= nil) and (v2.y ~= nil) and (v2.z ~= nil) then
+        local unit_position = v2.x..v2.y..v2.z
+        if (PositionInfo[unit_position] ~= nil) and (PositionInfo[unit_position].space ~= nil) then
+          table.insert(PositionInfo[unit_position], 1, k1)
+        end
+      end
+    end
+  end
+end
+for k1,v1 in pairs(PositionInfo) do
+  if (v1.space ~= nil) then
+    local SpaceCard = getObjectFromGUID(v1.space)
+    local atk_point = 0
+    for k2,v2 in pairs(v1) do
+      if (k2 ~= 'space') then
+        if (string.match(v2, '%l') == 'f') then
+          if (UnitToken[v2].getName() == '先锋舰队') then
+            atk_point = atk_point + 1
+          end
+          if (UnitToken[v2].getName() == '主力舰队') then
+            atk_point = atk_point + 2
+          end
+        end
+        if (string.match(v2, '%l') == 'b') then
+          if (0 + CardDetail[v2].atk > 4) then
+            atk_point = atk_point + 4
+          else atk_point = atk_point + CardDetail[v2].atk
+          end
+        end
+        SpaceCard.setDescription('空间板块战斗力：'..atk_point)
+      end
+    end
+  end
+end
+end
+
+function onObjectEnterScriptingZone(zone, enter_object)
+
+
+local CardCode = enter_object.getDescription()
+if (string.find(CardCode, '%u%d%d', 1, false) ~= nil) then  --识别进入物品是否为手牌
+
+  ----出牌区
+  if (zone.guid == CardZone.guid) then
+    if (enter_object.getRotation().x < 20) or (enter_object.getRotation().x > 340) then
+      if (enter_object.getRotation().z < 20) or (enter_object.getRotation().z > 340) then
+        if (enter_object.getRotation().y > 30) and (enter_object.getRotation().y < 150) then
+          if (string.find(cards.player_event, CardCode, 1, true) ~= nil) then
+            printToAll(CardZone.getName()..'触发'..cards[CardCode].type..cards[CardCode].name..'，'..cards[CardCode].effect, colorsRGB.mediumpurple)
+          end
+          if (string.find(cards.command, CardCode, 1, true) ~= nil) or (string.find(cards.conter, CardCode, 1, true) ~= nil) then
+            help_you_speak(CardCode)
+          end
+        else
+          if (cards[CardCode].energy_avaliable == true) then
+            if (cards[CardCode].np_consume > 0) then
+              if (cards[CardCode].np_consume <= npNum) then
+                printToAll('消耗'..cards[CardCode].np_consume..'点国力', colorsRGB.violet)
+                printToAll(CardZone.getName()..'将'..cards[CardCode].name..'兑换为'..cards[CardCode].energy..'点能源', colorsRGB.violet)
+              else
+                if (npNum > 0) then
+                  printToAll('消耗'..npNum..'点国力，抽'..cards[CardCode].np_consume - npNum .. '张事件牌', colorsRGB.mediumpurple)
+                  printToAll(CardZone.getName()..'将'..cards[CardCode].name..'兑换为'..cards[CardCode].energy..'点能源', colorsRGB.violet)
+                else printToAll('国力不足，无法兑换为能源',colorsRGB.red)
+                end
+              end
+            else printToAll(CardZone.getName()..'将'..cards[CardCode].name..'兑换为'..cards[CardCode].energy..'点能源', colorsRGB.violet)
+            end
+          else printToAll('此牌无法兑换为能源', colorsRGB.red)
+          end
+        end
+      end
+    end
+  end
+
+end
+end
+
+function onObjectLeaveScriptingZone(zone, leave_object)
+  CardCode = leave_object.getDescription()
+  if (string.find(CardCode, '%u%d%d', 1, false) ~= nil) then --识别进入物品是否为手牌
+    ----建筑槽1
+    if (zone.guid == BuildSlot.b1.guid) then
+      if (string.find(cards.force, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) or (string.find(cards.build, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) then
+        if (CardDetail.b0.code ~= nil) and (CardDetail.b0.code..'_b0' == CardCode) then --总部卡牌离开建筑槽
+          leave_object.setDescription(string.match(CardDetail.b0.code,'%u%d%d',1)) --重置卡牌编号
+          CardDetail.b0 = cards.pattern                                       --解绑建筑细节
+          element_calculate()
+          apply_element()
+          UnitToken.b0.setName('建筑标识-总部')                                      --重置建筑标识名称
+          BuildSlot.b1.setDescription('')
+          CardZone.setName('紫方')                                             --重置势力名
+        else
+          if (CardDetail.b1.code ~= nil) and (CardDetail.b1.code..'_b1' == CardCode) then --卡牌离开建筑槽(列强治下的和平剧本)
+            leave_object.setDescription(string.match(CardDetail.b1.code,'%u%d%d',1)) --重置卡牌编号
+            CardDetail.b1 = cards.pattern                                                 --解绑建筑细节
+            element_calculate()
+            apply_element()
+            UnitToken.b1.setName('建筑标识-一')                                       --重置建筑标识名称
+          end
+        end
+      end
+      --强化槽1
+      if (string.find(cards.equip, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) and (CardDetail.e1.code ~= nil) and (CardDetail.e1.code..'_e1' == CardCode) then
+        leave_object.setDescription(string.match(CardDetail.e1.code,'%u%d%d',1))
+        CardDetail.e1 = {}
+        element_calculate()
+        apply_element()
+      end
+    end
+
+    ---建筑槽2
+    if (zone.guid == BuildSlot.b2.guid) then
+      if (string.find(cards.force, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) or (string.find(cards.build, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) then
+        if (CardDetail.b2.code ~= nil) and (CardDetail.b2.code..'_b2' == CardCode) then --卡牌离开建筑槽
+          leave_object.setDescription(string.match(CardDetail.b2.code,'%u%d%d',1)) --重置卡牌编号
+          CardDetail.b2 = cards.pattern                                                  --解绑建筑细节
+          element_calculate()
+          apply_element()
+          UnitToken.b2.setName('建筑标识-二')                                       --重置建筑标识名称
+          BuildSlot.b2.setDescription('')
+        end
+      end
+      if (string.find(cards.equip, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) and (CardDetail.e2.code ~= nil) and (CardDetail.e2.code..'_e2' == CardCode) then
+        leave_object.setDescription(string.match(CardDetail.e2.code,'%u%d%d',1))
+        CardDetail.e2 = {}
+        element_calculate()
+        apply_element()
+      end
+    end
+
+    --建筑槽3
+    if (zone.guid == BuildSlot.b3.guid) then
+      if (string.find(cards.force, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) or (string.find(cards.build, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) then
+        if (CardDetail.b3.code ~= nil) and (CardDetail.b3.code..'_b3' == CardCode) then --卡牌离开建筑槽
+          leave_object.setDescription(string.match(CardDetail.b3.code,'%u%d%d',1)) --重置卡牌编号
+          CardDetail.b3 = cards.pattern                                                 --解绑建筑细节
+          element_calculate()
+          apply_element()
+          UnitToken.b3.setName('建筑标识-三')                                       --重置建筑标识名称
+          BuildSlot.b3.setDescription('')
+        end
+      end
+      if (string.find(cards.equip, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) and (CardDetail.e3.code ~= nil) and (CardDetail.e3.code..'_e3' == CardCode) then
+        leave_object.setDescription(string.match(CardDetail.e3.code,'%u%d%d',1))
+        CardDetail.e3 = {}
+        element_calculate()
+        apply_element()
+      end
+    end
+
+    --建筑槽4
+    if (zone.guid == BuildSlot.b4.guid) then
+      if (string.find(cards.force, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) or (string.find(cards.build, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) then
+        if (CardDetail.b4.code ~= nil) and (CardDetail.b4.code..'_b4' == CardCode) then --卡牌离开建筑槽
+          leave_object.setDescription(string.match(CardDetail.b4.code,'%u%d%d',1)) --重置卡牌编号
+          CardDetail.b4 = cards.pattern                                                  --解绑建筑细节
+          element_calculate()
+          apply_element()
+          UnitToken.b4.setName('建筑标识-四')                                       --重置建筑标识名称
+          BuildSlot.b4.setDescription('')
+        end
+      end
+      if (string.find(cards.equip, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) and (CardDetail.e4.code ~= nil) and (CardDetail.e4.code..'_e4' == CardCode) then
+        leave_object.setDescription(string.match(CardDetail.e4.code,'%u%d%d',1))
+        CardDetail.e4 = {}
+        element_calculate()
+        apply_element()
+      end
+    end
+
+    --建筑槽5
+    if (zone.guid == BuildSlot.b5.guid) then
+      if (string.find(cards.force, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) or (string.find(cards.build, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) then
+        if (CardDetail.b5.code ~= nil) and (CardDetail.b5.code..'_b5' == CardCode) then --卡牌离开建筑槽
+          leave_object.setDescription(string.match(CardDetail.b5.code,'%u%d%d',1)) --重置卡牌编号
+          CardDetail.b5 = cards.pattern                                                  --解绑建筑细节
+          element_calculate()
+          apply_element()
+          UnitToken.b5.setName('建筑标识-五')                                       --重置建筑标识名称
+          BuildSlot.b5.setDescription('')
+        end
+      end
+      if (string.find(cards.equip, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) and (CardDetail.e5.code ~= nil) and (CardDetail.e5.code..'_e5' == CardCode) then
+        leave_object.setDescription(string.match(CardDetail.e5.code,'%u%d%d',1))
+        CardDetail.e5 = {}
+        element_calculate()
+        apply_element()
+      end
+    end
+
+
+  end
+end
+
+
+------------------------------------------------建筑/强化效果分析函数
+function element_calculate()
+  Result_npLimit = 0
+  Result_sciNum = 0
+  exnp_C01 = 0          --殖民地国力附加值
+  exatk_A01 = 0
+  exatk_C01 = 0         --殖民地战斗力附加值
+  exatk_C02 = 0         --科研所战斗力附加值
+  exatk_C03 = 0         --星港要塞战斗力附加值
+  exatk_S01 = 0
+  exatk_S02 = 0
+  exatk_S14 = 0
+  for k,v in pairs(CardDetail) do   ---临时 总部特殊效果-----------------------------
+    if (v.code ~= nil) then
+      if (string.match(v.code, '%u%d%d') == 'C26') then
+        exatk_C01 = exatk_C01 + 1
+        exatk_C02 = exatk_C02 + 1
+        exatk_A01 = exatk_A01 + 1
+      end
+      if (string.match(v.code, '%u%d%d') == 'A04') then
+        exatk_C01 = exatk_C01 + 1
+        exatk_C02 = exatk_C02 + 1
+        exatk_S01 = exatk_S01 + 1
+        exatk_S02 = exatk_S02 + 1
+        exatk_S14 = exatk_S14 + 1
+      end
+      if (string.match(v.code, '%u%d%d') == 'A02') then
+        exnp_C01 = exnp_C01 + 1
+        exatk_C01 = 2
+      end
+    end
+ end                                ---------------------------------------------------
+
+ for k,v in pairs(CardDetail) do            ----------科研力量计算
+   if (v.code ~= nil) then
+     Result_sciNum = Result_sciNum + v.sci
+   end
+ end
+ sciNum = manual_sciNum + Result_sciNum
+ for k,v in pairs(CardDetail) do            ----------建筑提供国力计算
+   if (v.code ~= nil) then
+     Result_npLimit = Result_npLimit + v.np_produce
+   end
+ end
+ npLimit = manual_npLimit + Result_npLimit
+end
+
+
+
+function apply_element()
+  if (npLimit >= 16)
+  then npLimit = 16
+    printToAll(CardZone.getName()..'达成国力胜利', colorsRGB.gold)
+  end
+  if (npLimit < 0) then npLimit = 0 end
+  if (sciNum > 6) then sciNum = 6 end
+  if (sciNum < 0) then sciNum = 0 end
+  npLimitToken.setPositionSmooth({23.85, 1.23, npLimit * 1.17 - 9.87}, false, false)
+  SciToken.setPositionSmooth({29.32, 1.25, 3.88 + sciNum * 0.84}, false, false)
+end
+
+
+-------聋哑人的好朋友
+function help_you_speak(CardCode)
+  local present_failed = '说书功能出现错误，无法识别卡牌'
+  local present_noramal = '说书功能出现错误，无法识别卡牌'
+  if (string.find(cards.equip, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) or (string.find(cards.build, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) then
+    present_normal = CardZone.getName()..'部署'..cards[CardCode].type..cards[CardCode].name
+    present_failed = '，无法部署'..cards[CardCode].type
+  end
+  if (string.find(cards.command, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) or (string.find(cards.conter, string.match(CardCode, '%u%d%d'), 1, true) ~= nil) then
+    present_normal = CardZone.getName()..'使用'..cards[CardCode].type..cards[CardCode].name
+    present_failed = '，无法使用此'..cards[CardCode].type
+  end
+  if (cards[CardCode].sci_required <= sciNum) then
+    if (cards[CardCode].np_consume > 0) then
+      if (cards[CardCode].np_consume <= npNum) then
+        printToAll('消耗'..cards[CardCode].np_consume..'点国力', colorsRGB.violet)
+        printToAll(present_normal, colorsRGB.violet)
+      else
+        if (npNum > 0) then
+          printToAll('消耗'..npNum..'点国力，抽'..cards[CardCode].np_consume - npNum .. '张事件牌', colorsRGB.mediumpurple)
+          printToAll(present_normal, colorsRGB.violet)
+        else printToAll('国力不足'..present_failed,colorsRGB.red)
+        end
+      end
+    else printToAll(present_normal, colorsRGB.violet)
+    end
+  else printToAll('科研力量不足'..present_failed, colorsRGB.red)
+  end
+end
